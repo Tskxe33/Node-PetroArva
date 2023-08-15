@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../prisma";
 import dayjs from "dayjs";
+import { CURRENT_DATE } from "../constants/Date";
 
 interface BookingDto {
   guestName: string;
@@ -50,6 +51,10 @@ const createBooking = async (
 type BookingOutcome = { result: boolean; reason: string };
 
 async function isBookingPossible(booking: BookingDto): Promise<BookingOutcome> {
+  if (dayjs(booking.checkInDate).isBefore(CURRENT_DATE)) {
+    return { result: false, reason: "You cannot Unit a room in the past" };
+  }
+
   // check 1 : The Same guest cannot book the same unit multiple times
   let sameGuestSameUnit = await prisma.booking.findMany({
     where: {
@@ -85,27 +90,74 @@ async function isBookingPossible(booking: BookingDto): Promise<BookingOutcome> {
     };
   }
 
+  const myCheckOutDate = dayjs(booking.checkInDate)
+    .add(booking.numberOfNights, "day")
+    .toDate();
+
   // check 3 : Unit is available for the check-in date
   let isUnitAvailableOnCheckInDate = await prisma.booking.findMany({
     where: {
       unitID: {
         equals: booking.unitID,
       },
+      AND: [
+        {
+          OR: [
+            {
+              checkInDate: {
+                lte: new Date(booking.checkInDate),
+                gte: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkOutDate: {
+                lte: new Date(booking.checkInDate),
+                gte: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkInDate: {
+                lte: new Date(booking.checkInDate),
+              },
+              checkOutDate: {
+                gte: new Date(booking.checkInDate),
+              },
+            },
+          ],
+        },
+        {
+          OR: [
+            {
+              checkInDate: {
+                lte: myCheckOutDate,
+                gte: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkOutDate: {
+                lte: myCheckOutDate,
+                gte: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkInDate: {
+                lte: new Date(booking.checkInDate),
+              },
+              checkOutDate: {
+                gte: myCheckOutDate,
+              },
+            },
+          ],
+        },
+      ],
     },
   });
 
-  for (const unit of isUnitAvailableOnCheckInDate) {
-    const checkoutDate = dayjs(unit.checkInDate).add(
-      unit.numberOfNights,
-      "day"
-    );
-
-    if (checkoutDate && dayjs(booking.checkInDate).isBefore(checkoutDate)) {
-      return {
-        result: false,
-        reason: `For the given check-in date, the unit is already occupied`,
-      };
-    }
+  if (isUnitAvailableOnCheckInDate.length > 0) {
+    return {
+      result: false,
+      reason: `For the given check-in date, the unit is already occupied`,
+    };
   }
 
   return { result: true, reason: "OK" };
@@ -147,32 +199,72 @@ const isUpdateBookingPossible = async (
   }
 
   // calculate new checkout Date
-  const newCheckoutDate = dayjs(booking.checkInDate)
+  const myNewCheckoutDate = dayjs(booking.checkInDate)
     .add(booking.numberOfNights, "day")
-    .add(updateBooking.numberOfNights, "day");
+    .add(updateBooking.numberOfNights, "day")
+    .toDate();
 
-  let isUnitAvailableForExtension = await prisma.booking.findMany({
+  //Check if unit is available for extension
+  let overlappingBookings = await prisma.booking.findFirst({
     where: {
       unitID: booking.unitID,
+      AND: [
+        {
+          OR: [
+            {
+              checkInDate: {
+                lte: myNewCheckoutDate,
+                gte: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkOutDate: {
+                lte: myNewCheckoutDate,
+                gte: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkInDate: {
+                lte: new Date(booking.checkInDate),
+              },
+              checkOutDate: {
+                gte: myNewCheckoutDate,
+              },
+            },
+            {
+              checkInDate: {
+                lte: new Date(booking.checkInDate),
+              },
+              checkOutDate: {
+                gte: new Date(booking.checkOutDate),
+              },
+            },
+            {
+              checkInDate: {
+                equals: new Date(booking.checkInDate),
+              },
+            },
+            {
+              checkOutDate: {
+                equals: new Date(booking.checkOutDate),
+              },
+            },
+          ],
+        },
+        {
+          NOT: {
+            id: booking.id,
+          },
+        },
+      ],
     },
   });
 
-  //Check if unit is available for extension
-  for (const unit of isUnitAvailableForExtension) {
-    const checkoutDate = dayjs(unit.checkInDate).add(
-      unit.numberOfNights,
-      "day"
-    );
-
-    if (
-      checkoutDate.toISOString() > newCheckoutDate.toISOString() ||
-      booking.checkInDate < unit.checkInDate
-    ) {
-      return {
-        result: false,
-        reason: `Can not extend stay period, because this unit is already booked!`,
-      };
-    }
+  if (overlappingBookings) {
+    return {
+      result: false,
+      reason: `Can not extend stay period, because this unit is already booked!`,
+    };
   }
 
   // if available, update current booking
@@ -181,6 +273,7 @@ const isUpdateBookingPossible = async (
       id,
     },
     data: {
+      checkOutDate: myNewCheckoutDate,
       numberOfNights: booking.numberOfNights + updateBooking.numberOfNights,
     },
   });
