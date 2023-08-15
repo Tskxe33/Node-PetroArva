@@ -1,6 +1,6 @@
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./app.db"
 }
 
 generator client {
@@ -8,7 +8,7 @@ generator client {
 }
 
 model Booking {
-  id             Int     @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   guestName      String
   unitID         String
   checkInDate    DateTime
