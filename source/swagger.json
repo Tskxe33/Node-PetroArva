@@ -76,7 +76,7 @@
   "components": {
     "schemas": {
       "id": {
-        "type": "string",
+        "type": "integer",
         "description": "An id of a todo",
         "example": "id"
       },

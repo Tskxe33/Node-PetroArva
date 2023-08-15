@@ -44,9 +44,9 @@ const createBooking = async (
   return res.status(200).json(bookingResult);
 };
 
-type bookingOutcome = { result: boolean; reason: string };
+type BookingOutcome = { result: boolean; reason: string };
 
-async function isBookingPossible(booking: BookingDto): Promise<bookingOutcome> {
+async function isBookingPossible(booking: BookingDto): Promise<BookingOutcome> {
   // check 1 : The Same guest cannot book the same unit multiple times
   let sameGuestSameUnit = await prisma.booking.findMany({
     where: {
@@ -116,7 +116,73 @@ const updateBooking = async (
   const updateBooking: UpdateBookingDto = req.body;
   const { id } = req.params;
 
+  let outcome = await isUpdateBookingPossible(updateBooking, parseInt(id, 10));
+  if (!outcome.result) {
+    return res.status(400).json(outcome.reason);
+  }
+
   return res.status(200).json();
+};
+
+const isUpdateBookingPossible = async (
+  updateBooking: UpdateBookingDto,
+  id: number
+): Promise<BookingOutcome> => {
+  // find unique booking to update if possible
+  const booking = await prisma.booking.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  //check if booking exit with given id
+  if (!booking || booking.id !== id) {
+    return {
+      result: false,
+      reason: `User do not exists.`,
+    };
+  }
+
+  // calculate new checkout Date
+  const newCheckoutDate = dayjs(booking.checkInDate)
+    .add(booking.numberOfNights, "day")
+    .add(updateBooking.numberOfNights, "day");
+
+  let isUnitAvailableForExtension = await prisma.booking.findMany({
+    where: {
+      unitID: booking.unitID,
+    },
+  });
+
+  //Check if unit is available for extension
+  for (const unit of isUnitAvailableForExtension) {
+    const checkoutDate = dayjs(unit.checkInDate).add(
+      unit.numberOfNights,
+      "day"
+    );
+
+    if (
+      checkoutDate.toISOString() > newCheckoutDate.toISOString() ||
+      booking.checkInDate < unit.checkInDate
+    ) {
+      return {
+        result: false,
+        reason: `Can not extend stay period, because this unit is already booked!`,
+      };
+    }
+  }
+
+  // if available, update current booking
+  await prisma.booking.update({
+    where: {
+      id,
+    },
+    data: {
+      numberOfNights: booking.numberOfNights + updateBooking.numberOfNights,
+    },
+  });
+
+  return { result: true, reason: "OK" };
 };
 
 export default { healthCheck, createBooking, updateBooking };
