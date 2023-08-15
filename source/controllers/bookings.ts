@@ -9,6 +9,11 @@ interface BookingDto {
   numberOfNights: number;
 }
 
+interface UpdateBookingDto {
+  unitID: string;
+  numberOfNights: number;
+}
+
 const healthCheck = async (req: Request, res: Response, next: NextFunction) => {
   return res.status(200).json({
     message: "OK",
@@ -103,4 +108,15 @@ async function isBookingPossible(booking: BookingDto): Promise<bookingOutcome> {
   return { result: true, reason: "OK" };
 }
 
-export default { healthCheck, createBooking };
+const updateBooking = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const updateBooking: UpdateBookingDto = req.body;
+  const { id } = req.params;
+
+  return res.status(200).json();
+};
+
+export default { healthCheck, createBooking, updateBooking };

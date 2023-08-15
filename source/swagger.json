@@ -1,1 +1,105 @@
-{"openapi":"3.0.1","info":{"title":"OpenAPI definition","version":"v0"},"servers":[{"url":"http://localhost:8000","description":"Generated server url"}],"paths":{"/api/v1/booking":{"post":{"tags":["booking-controller"],"operationId":"createBooking","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BookingInput"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/":{"get":{"tags":["booking-controller"],"operationId":"helloWorld","responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"$ref":"#/components/schemas/HealthResponse"}}}}}}}},"components":{"schemas":{"BookingInput":{"type":"object","properties":{"guestName":{"type":"string"},"unitID":{"type":"string"},"checkInDate":{"type":"string","format":"date"},"numberOfNights":{"type":"integer","format":"int32"}}},"HealthResponse":{"type":"object","properties":{"message":{"type":"string"}}}}}}
+{
+  "openapi": "3.0.1",
+  "info": { "title": "OpenAPI definition", "version": "v0" },
+  "servers": [
+    { "url": "http://localhost:8000", "description": "Generated server url" }
+  ],
+  "paths": {
+    "/api/v1/booking": {
+      "post": {
+        "tags": ["booking-controller"],
+        "operationId": "createBooking",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BookingInput" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/booking/{id}": {
+      "patch": {
+        "tags": ["booking-controller"],
+        "operationId": "updateBooking",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/id"
+            },
+            "required": true,
+            "description": "ID of the booking to update"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BookingUpdateInput" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": ["booking-controller"],
+        "operationId": "helloWorld",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "id": {
+        "type": "string",
+        "description": "An id of a todo",
+        "example": "id"
+      },
+      "BookingInput": {
+        "type": "object",
+        "properties": {
+          "guestName": { "type": "string" },
+          "unitID": { "type": "string" },
+          "checkInDate": { "type": "string", "format": "date" },
+          "numberOfNights": { "type": "integer", "format": "int32" }
+        }
+      },
+      "BookingUpdateInput": {
+        "type": "object",
+        "properties": {
+          "unitID": { "type": "string" },
+          "numberOfNights": { "type": "integer", "format": "int32" }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": { "message": { "type": "string" } }
+      }
+    }
+  }
+}
