@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "nodemon source/server.ts",
     "build": "rm -rf build/ && prettier --write source/ && tsc",
-    "test": "jest --coverage --detectOpenHandles --runInBand"
+    "test": "jest --coverage --detectOpenHandles --runInBand",
+    "prisma-studio": "npx prisma studio --schema ./source/prisma/schema.prisma",
+    "prisma-migrate-dev": "npx prisma migrate dev --schema ./source/prisma/schema.prisma",
+    "prisma-db-push": "prisma db push --schema ./source/prisma/schema.prisma",
+    "prisma-generate": "prisma generate --schema ./source/prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",
