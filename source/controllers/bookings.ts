@@ -38,6 +38,9 @@ const createBooking = async (
       unitID: booking.unitID,
       checkInDate: new Date(booking.checkInDate),
       numberOfNights: booking.numberOfNights,
+      checkOutDate: dayjs(booking.checkInDate)
+        .add(booking.numberOfNights, "day")
+        .toDate(),
     },
   });
 
